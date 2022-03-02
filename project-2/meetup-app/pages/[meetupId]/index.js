@@ -1,33 +1,36 @@
 import React from "react";
+import { MongoClient, ObjectId } from "mongodb";
 
 import MeetupDetail from "../../components/meetups/MeetupDetail";
 
-const MeetupDetails = () => {
+const MeetupDetails = (props) => {
   return (
     <MeetupDetail
-      image="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Sydney_Opera_House%2C_vivid_Sydey.JPG/2880px-Sydney_Opera_House%2C_vivid_Sydey.JPG"
-      title="First Meetup"
-      address="Some Street 7, Some City"
-      description="This is a first meetup"
+      image={props.meetupData.image}
+      title={props.meetupData.title}
+      address={props.meetupData.address}
+      description={props.meetupData.description}
     />
   );
 };
 
 export const getStaticPaths = async () => {
+  const client = await MongoClient.connect(
+    "mongodb+srv://jimmikmak:Mfmibttf43@cluster0.xnf1f.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+
+  client.close();
+
   return {
     fallback: false,
-    paths: [
-      {
-        params: {
-          meetupId: "m1",
-        },
-      },
-      {
-        params: {
-          meetupId: "m2",
-        },
-      },
-    ],
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() },
+    })),
   };
 };
 
@@ -36,17 +39,29 @@ export const getStaticProps = async (context) => {
 
   const meetupId = context.params.meetupId;
 
-  console.log(meetupId);
+  const client = await MongoClient.connect(
+    "mongodb+srv://jimmikmak:Mfmibttf43@cluster0.xnf1f.mongodb.net/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+
+  const selectedMeetup = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId),
+  });
+
+  console.log(selectedMeetup);
+
+  client.close();
 
   return {
     props: {
       meetupData: {
-        image:
-          "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Sydney_Opera_House%2C_vivid_Sydey.JPG/2880px-Sydney_Opera_House%2C_vivid_Sydey.JPG",
-        id: meetupId,
-        title: "First Meetup",
-        address: "Some Street 7, Some City",
-        description: "This is a first meetup",
+        id: selectedMeetup._id.toString(),
+        title: selectedMeetup.title,
+        address: selectedMeetup.address,
+        image: selectedMeetup.image,
+        description: selectedMeetup.description,
       },
     },
   };
